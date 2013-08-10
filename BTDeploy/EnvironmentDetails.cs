@@ -23,7 +23,7 @@ namespace BTDeploy
 		private string MakeApplicationDataDirectoryPath()
 		{
 			// Make the path.
-			var systemApplicationDataDirectory = Environment.GetFolderPath (Environment.SpecialFolder.ApplicationData);
+			var systemApplicationDataDirectory = Environment.GetFolderPath (Environment.SpecialFolder.CommonApplicationData);
 			var applicationDataDirectoryPath = Path.Combine (systemApplicationDataDirectory, Assembly.GetExecutingAssembly ().GetName ().Name);
 
 			// Create the directory if it doesn't exist.
