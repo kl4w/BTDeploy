@@ -12,6 +12,7 @@ using MonoTorrent.Dht;
 using MonoTorrent.Common;
 using System.Collections.Generic;
 using BTDeploy.Helpers;
+using System.IO.Abstractions;
 
 namespace BTDeploy.ServiceDaemon.TorrentClients
 {
@@ -21,6 +22,7 @@ namespace BTDeploy.ServiceDaemon.TorrentClients
 		public int DefaultTorrentUploadSlots = 4;
 		public int DefaultTorrentOpenConnections = 150;
 
+		protected readonly IFileSystem FileSystem;
 		protected readonly string TorrentFileDirectory;
 		protected readonly string BrokenTorrentFileDirectory;
 		protected readonly string DHTNodeFile;
@@ -33,23 +35,24 @@ namespace BTDeploy.ServiceDaemon.TorrentClients
 
 		public MonoTorrentClient(string applicationDataDirectoryPath)
 		{
+			FileSystem = new FileSystem ();
 			// Make directories.
 			var monoTorrentClientApplicationDataDirectoryPath = Path.Combine (applicationDataDirectoryPath, this.GetType().Name);
-			if (!Directory.Exists (monoTorrentClientApplicationDataDirectoryPath))
-				Directory.CreateDirectory (monoTorrentClientApplicationDataDirectoryPath);
+			if (!FileSystem.Directory.Exists (monoTorrentClientApplicationDataDirectoryPath))
+				FileSystem.Directory.CreateDirectory (monoTorrentClientApplicationDataDirectoryPath);
 
-			TorrentFileDirectory = Path.Combine (monoTorrentClientApplicationDataDirectoryPath, "torrents");
-			if (!Directory.Exists (TorrentFileDirectory))
-				Directory.CreateDirectory (TorrentFileDirectory);
+			TorrentFileDirectory = FileSystem.Path.Combine (monoTorrentClientApplicationDataDirectoryPath, "torrents");
+			if (!FileSystem.Directory.Exists (TorrentFileDirectory))
+				FileSystem.Directory.CreateDirectory (TorrentFileDirectory);
 
-			BrokenTorrentFileDirectory = Path.Combine (monoTorrentClientApplicationDataDirectoryPath, "broken");
-			if (!Directory.Exists (BrokenTorrentFileDirectory))
-				Directory.CreateDirectory (BrokenTorrentFileDirectory);
+			BrokenTorrentFileDirectory = FileSystem.Path.Combine (monoTorrentClientApplicationDataDirectoryPath, "broken");
+			if (!FileSystem.Directory.Exists (BrokenTorrentFileDirectory))
+				FileSystem.Directory.CreateDirectory (BrokenTorrentFileDirectory);
 
 			// Make files.
-			DHTNodeFile = Path.Combine (monoTorrentClientApplicationDataDirectoryPath, "dhtNodes");
-			FastResumeFile = Path.Combine (monoTorrentClientApplicationDataDirectoryPath, "fastResume");
-			TorrentMappingsCacheFile = Path.Combine (monoTorrentClientApplicationDataDirectoryPath, "torrentMappingsCache");
+			DHTNodeFile = FileSystem.Path.Combine (monoTorrentClientApplicationDataDirectoryPath, "dhtNodes");
+			FastResumeFile = FileSystem.Path.Combine (monoTorrentClientApplicationDataDirectoryPath, "fastResume");
+			TorrentMappingsCacheFile = FileSystem.Path.Combine (monoTorrentClientApplicationDataDirectoryPath, "torrentMappingsCache");
 
 			// Make mappings cache.
 			TorrentMappingsCache = new ListFile<TorrentMapping> (TorrentMappingsCacheFile);
@@ -72,7 +75,7 @@ namespace BTDeploy.ServiceDaemon.TorrentClients
 			byte[] nodes = null;
 			try
 			{
-				nodes = File.ReadAllBytes(DHTNodeFile);
+				nodes = FileSystem.File.ReadAllBytes(DHTNodeFile);
 			}
 			catch
 			{
@@ -85,7 +88,7 @@ namespace BTDeploy.ServiceDaemon.TorrentClients
 			// Fast resume.
 			try
 			{
-				FastResume = BEncodedValue.Decode<BEncodedDictionary>(File.ReadAllBytes(FastResumeFile));
+				FastResume = BEncodedValue.Decode<BEncodedDictionary>(FileSystem.File.ReadAllBytes(FastResumeFile));
 			}
 			catch
 			{
@@ -102,14 +105,14 @@ namespace BTDeploy.ServiceDaemon.TorrentClients
 			}
 
 			// Cross reference torrent files against cache entries (sync).
-			var torrents = Directory.GetFiles (TorrentFileDirectory, "*.torrent").Select (Torrent.Load).ToList();
+			var torrents = FileSystem.Directory.GetFiles (TorrentFileDirectory, "*.torrent").Select (Torrent.Load).ToList();
 			TorrentMappingsCache.RemoveAll (tmc => !torrents.Any (t => t.InfoHash.ToString () == tmc.InfoHash));
 			TorrentMappingsCache.Save ();
 			torrents.Where (t => !TorrentMappingsCache.Any (tmc => tmc.InfoHash == t.InfoHash.ToString ()))
 					.ToList ().ForEach (t => File.Delete(t.TorrentPath));
 
 			// Reload the torrents and add them.
-			Directory.GetFiles (TorrentFileDirectory, "*.torrent").ToList ().ForEach (torrentFile =>
+			FileSystem.Directory.GetFiles (TorrentFileDirectory, "*.torrent").ToList ().ForEach (torrentFile =>
 			{
 				var torrent = Torrent.Load(torrentFile);
 				var outputDirectoryPath = TorrentMappingsCache.First(tmc => tmc.InfoHash == torrent.InfoHash.ToString()).OutputDirectoryPath;
@@ -119,9 +122,9 @@ namespace BTDeploy.ServiceDaemon.TorrentClients
 				}
 				catch
 				{
-					var brokenTorrentFileName = Path.GetFileName(torrentFile);
-					var brokenTorrentFilePath = System.IO.Path.Combine(BrokenTorrentFileDirectory, brokenTorrentFileName);
-					File.Copy(torrentFile, brokenTorrentFilePath, true);
+					var brokenTorrentFileName = FileSystem.Path.GetFileName(torrentFile);
+					var brokenTorrentFilePath = FileSystem.Path.Combine(BrokenTorrentFileDirectory, brokenTorrentFileName);
+					FileSystem.File.Copy(torrentFile, brokenTorrentFilePath, true);
 					Remove(torrent.InfoHash.ToString());
 				}
 			});
@@ -151,16 +154,16 @@ namespace BTDeploy.ServiceDaemon.TorrentClients
 
 			// Save torrent file.
 			torrentFile.Position = 0;
-			var applicationDataTorrentFilePath = Path.Combine (TorrentFileDirectory, torrent.InfoHash.ToString() + ".torrent");
-			using (var file = File.OpenWrite(applicationDataTorrentFilePath))
+			var applicationDataTorrentFilePath = FileSystem.Path.Combine (TorrentFileDirectory, torrent.InfoHash.ToString() + ".torrent");
+			using (var file = FileSystem.File.OpenWrite(applicationDataTorrentFilePath))
 				StreamHelpers.CopyStream (torrentFile, file);
 
 			// Reload the torrent.
 			torrent = Torrent.Load(applicationDataTorrentFilePath);
 
 			// Create output directory.
-			if (!Directory.Exists (outputDirectoryPath))
-				Directory.CreateDirectory (outputDirectoryPath);
+			if (!FileSystem.Directory.Exists (outputDirectoryPath))
+				FileSystem.Directory.CreateDirectory (outputDirectoryPath);
 
 			// Finally add.
 			return Add (torrent, outputDirectoryPath);
@@ -211,7 +214,7 @@ namespace BTDeploy.ServiceDaemon.TorrentClients
 
 			// Delete files if required.
 			if(deleteFiles)
-				Directory.Delete(torrentManager.SavePath, true);
+				FileSystem.Directory.Delete(torrentManager.SavePath, true);
 		}
 
 		public Stream Create (string name, string sourceDirectoryPath, IEnumerable<string> trackers = null)

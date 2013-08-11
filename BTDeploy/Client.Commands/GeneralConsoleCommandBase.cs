@@ -9,6 +9,7 @@ using System.Text.RegularExpressions;
 using System.Linq;
 using BTDeploy.Client.Commands;
 using System.Threading;
+using System.IO.Abstractions;
 
 namespace BTDeploy.Client.Commands
 {
@@ -16,6 +17,7 @@ namespace BTDeploy.Client.Commands
 	{
 		protected readonly IEnvironmentDetails EnvironmentDetails;
 		protected readonly IRestClient Client;
+		protected readonly IFileSystem FileSystem;
 
 		protected bool Start = true;
 		protected bool Kill = true;
@@ -31,6 +33,7 @@ namespace BTDeploy.Client.Commands
 			// Set common items.
 			EnvironmentDetails = environmentDetails;
 			Client = client;
+			FileSystem = environmentDetails.FileSystem;
 		}
 
 		public override int? OverrideAfterHandlingArgumentsBeforeRun (string[] remainingArguments)

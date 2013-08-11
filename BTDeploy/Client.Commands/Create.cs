@@ -35,7 +35,7 @@ namespace BTDeploy.Client.Commands
 				Trackers = Trackers
 			});
 
-			using (var file = File.OpenWrite(torrentFilePath))
+			using (var file = FileSystem.File.OpenWrite(torrentFilePath))
 				StreamHelpers.CopyStream (outputStream, file);
 
 			if (Add)
