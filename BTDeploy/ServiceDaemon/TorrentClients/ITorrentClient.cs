@@ -1,11 +1,13 @@
 using System;
 using System.IO;
 using System.Collections.Generic;
+using System.IO.Abstractions;
 
 namespace BTDeploy.ServiceDaemon.TorrentClients
 {
 	public interface ITorrentClient
 	{
+		IFileSystem FileSystem { get; set; }
 		ITorrentDetails[] List();
 		string Add(Stream torrentFile, string outputDirectoryPath);
 		void Remove(string Id, bool deleteFiles = false);

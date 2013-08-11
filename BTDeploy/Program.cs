@@ -13,6 +13,7 @@ using System.Net.Sockets;
 using System.Net;
 using System.IO;
 using BTDeploy.Helpers;
+using System.IO.Abstractions;
 
 namespace BTDeploy
 {
@@ -21,7 +22,7 @@ namespace BTDeploy
 		public static void Main (string[] args)
 		{
 			// Make environment details.
-			var environmentDetails = new EnvironmentDetails ();
+			var environmentDetails = new EnvironmentDetails (new FileSystem());
 
 			// Run as service deamon otherwise as client commands.
 			if (args.Any () && args.First () == environmentDetails.ServiceDaemonCommand)
@@ -33,7 +34,7 @@ namespace BTDeploy
 		protected static void RunServiceDaemon(IEnvironmentDetails environmentDetails)
 		{
 			// Make the torrent client.
-			var monotTorrentClient = new MonoTorrentClient (environmentDetails.ApplicationDataDirectoryPath);
+			var monotTorrentClient = new MonoTorrentClient (environmentDetails.ApplicationDataDirectoryPath, environmentDetails.FileSystem);
 			monotTorrentClient.Start ();
 
 			// Make torrent service app host.

@@ -21,8 +21,8 @@ namespace BTDeploy.ServiceDaemon.TorrentClients
 		public int Port = 55999;
 		public int DefaultTorrentUploadSlots = 4;
 		public int DefaultTorrentOpenConnections = 150;
+		public IFileSystem FileSystem { get; set; }
 
-		protected readonly IFileSystem FileSystem;
 		protected readonly string TorrentFileDirectory;
 		protected readonly string BrokenTorrentFileDirectory;
 		protected readonly string DHTNodeFile;
@@ -33,9 +33,9 @@ namespace BTDeploy.ServiceDaemon.TorrentClients
 		protected BEncodedDictionary FastResume;
 		protected ListFile<TorrentMapping> TorrentMappingsCache;
 
-		public MonoTorrentClient(string applicationDataDirectoryPath)
+		public MonoTorrentClient(string applicationDataDirectoryPath, IFileSystem fileSystem)
 		{
-			FileSystem = new FileSystem ();
+			FileSystem = fileSystem;
 			// Make directories.
 			var monoTorrentClientApplicationDataDirectoryPath = Path.Combine (applicationDataDirectoryPath, this.GetType().Name);
 			if (!FileSystem.Directory.Exists (monoTorrentClientApplicationDataDirectoryPath))

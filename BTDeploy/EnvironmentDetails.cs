@@ -14,10 +14,10 @@ namespace BTDeploy
 		public string ServiceDaemonEndpoint { get; set; }
 		public IFileSystem FileSystem { get; private set; }
 
-		public EnvironmentDetails()
+		public EnvironmentDetails(IFileSystem fileSystem)
 		{
 			ServiceDaemonCommand = "service-daemon";
-			FileSystem = new FileSystem ();
+			FileSystem = fileSystem;
 			ApplicationDataDirectoryPath = MakeApplicationDataDirectoryPath ();
 			ServiceDaemonPort = 10000;
 			ServiceDaemonEndpoint = string.Format ("http://localhost:{0}/", ServiceDaemonPort);
